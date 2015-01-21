@@ -74,17 +74,17 @@ BootParams boot_params = {
 	{"Appsize", 0},			//NEW ADD FOR V3 应用程序实际大小
 	{"Debug",   0},			//NEW ADD FOR V3 是否打印调试信息
 	{"Debug",   0},			//NEW ADD FOR V3 是否打印调试信息
-	//{"devfs",    1},
-	//{"ostore",   0},	//0=nand, 1=nor
+	//{"devfs",1},
+	//{"ostore", 0},	//0=nand, 1=nor
 	{"userpara", sizeof(DEFAULT_USER_PARAMS)},
 	DEFAULT_USER_PARAMS,
 	{0}
 
 };
 int main(void) {
-	printf("* = %d\n",sizeof(char *));
-	printf("S1 = %d\n",sizeof(S1));
-	printf("s = %d\n",sizeof(s));
+	printf("* = %d\n",	sizeof(char *));
+	printf("S1 = %d\n",	sizeof(S1));
+	printf("s = %d\n",	sizeof(s));
 	//printf("Sizeof \"\"%d",sizeof(boot_params)); /* prints !!!Hello World!!! */
 	return EXIT_SUCCESS;
 }

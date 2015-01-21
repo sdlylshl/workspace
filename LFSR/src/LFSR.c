@@ -70,7 +70,7 @@ uint16_t get_random_u16( uint16_t hwSeed )
 int main(void) {
 	int i;
 	for(i=0;i<65000;i++){
-		printf("%x ",get_random_u16(4)%0xff);
+		printf("%x ",rand()%0xff);
 	}
 	puts("!!!Hello World!!!"); /* prints !!!Hello World!!! */
 	return EXIT_SUCCESS;
