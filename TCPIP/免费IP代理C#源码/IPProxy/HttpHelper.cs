@@ -20,6 +20,9 @@ using System.Security.Cryptography.X509Certificates;
 using System.Net.Security;
 using System.Net.Cache;
 
+//Http连接操作类 HttpHelper
+//Http请求参数类 HttpItem
+//Http返回参数类 HttpResult
 namespace DotNet4.Utilities
 {
     /// <summary>

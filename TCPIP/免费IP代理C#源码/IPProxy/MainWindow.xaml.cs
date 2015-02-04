@@ -25,6 +25,8 @@ using System.Threading;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Text.RegularExpressions;
+
 
 namespace IPProxy
 {
@@ -43,11 +45,11 @@ namespace IPProxy
             public int threadnum;//线程数
         }
         #region 全局变量声明
-        List<ProxyIP> tempProxyList;
-        List<ProxyIP> myProxyList;
-        List<ProxyIP> oldProxyList;
-        List<Thread> myThreadList;
-        SettingDate mySetting;
+        List<ProxyIP> tempProxyList= new List<ProxyIP>();
+        List<ProxyIP> myProxyList  = new List<ProxyIP>();
+        List<ProxyIP> oldProxyList = new List<ProxyIP>();
+        List<Thread> myThreadList  = new List<Thread>();
+        SettingDate mySetting      = new SettingDate();
         bool isRunning;
         #endregion
         public static string Search_string(string s, string s1, string s2)  //获取在S1与S2之间的字符串  
@@ -79,6 +81,65 @@ namespace IPProxy
             {
                 tempProxyList.Add(p);
             }
+        }
+
+        public void checkproxy() {
+            ProxyIP pp = new ProxyIP();
+            pp.IP = "101.71.27.120";
+            pp.Port = "80";
+            pp.Place = "未知";
+            if (pp != null)
+            {
+
+                HttpWebRequest Req;
+                WebProxy proxyObject = new WebProxy(pp.IP, Convert.ToInt32(pp.Port));// port为端口号 整数型
+                Req = WebRequest.Create("http://www.google.com/") as HttpWebRequest;
+                Req.Proxy = proxyObject; //设置代理
+                Req.Timeout = mySetting.timeout;   //超时
+                DateTime dt1 = DateTime.Now;
+                try
+                {
+                    if (pp.Place == "未知")
+                    {
+                        HttpHelper http = new HttpHelper();
+                        HttpItem item = new HttpItem();
+                        item.URL = "http://www.ip.cn/index.php?ip=" + pp.IP;
+                        HttpResult result = http.GetHtml(item);
+                        string strPlace = result.Html;
+                        if (!string.IsNullOrEmpty(strPlace))
+                        {
+                            strPlace = Search_string(strPlace, "来自：", "</p><p>");
+                            pp.Place = strPlace;
+                            //AddProxyIP(pp);
+                        }
+                    }
+                }
+                catch { }//忽略错误
+                try
+                {
+                    HttpWebResponse Resp = (HttpWebResponse)Req.GetResponse();
+                    DateTime dt2 = DateTime.Now;
+                    Encoding bin = Encoding.GetEncoding("utf-8");
+                    StreamReader sr = new StreamReader(Resp.GetResponseStream(), bin);
+                    string str = sr.ReadToEnd();
+                    sr.Close();
+                    sr.Dispose();
+                    if (str.Contains("百度"))
+                    {
+                        //result = true;
+                        TimeSpan ts = dt2 - dt1;
+                        pp.Speed = ((long)ts.TotalMilliseconds).ToString();
+                        //AddProxyIP(pp);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    pp.Speed = "超时";
+                    AddProxyIP(pp);
+                    Trace.WriteLine(ex.Message);
+                }
+            }
+                  
         }
         public void CheckProxyWork()//验证IP地址
         {
@@ -190,6 +251,8 @@ namespace IPProxy
                 tt.Start();
             }
         }
+
+  
         private void Button_Click_1(object sender, RoutedEventArgs e)//获取数据
         {
             //new Thread(new ThreadStart(delegate
@@ -232,11 +295,7 @@ namespace IPProxy
 
         private void Window_Loaded_1(object sender, RoutedEventArgs e)
         {
-            tempProxyList = new List<ProxyIP>();
-            myProxyList = new List<ProxyIP>();
-            oldProxyList = new List<ProxyIP>();
-            mySetting = new SettingDate();
-            myThreadList = new List<Thread>();
+
             GetLocalIP();
         }
 
@@ -246,7 +305,7 @@ namespace IPProxy
         }
         private void Button_Click_2(object sender, RoutedEventArgs e)//一键验证
         {
-            AbortThread();
+            AbortAllThread();
             msgLabel.Content = "验证时间由网络和电脑情况决定，请耐心等候";
             int threadNum;
             try
@@ -269,7 +328,7 @@ namespace IPProxy
                 msgLabel.Content = "请输入正确的超时时间！";
                 return;
             }
-            if (timeout >= 10 && timeout < 9999)
+            if (timeout >= 10 && timeout < 99999)
             {
                 mySetting.timeout = timeout;
             }
@@ -364,7 +423,7 @@ namespace IPProxy
              }
         }
         #endregion
-        private void AbortThread()//终止多线程
+        private void AbortAllThread()//终止多线程
         {
             if (myThreadList.Count > 0)
             {
@@ -397,17 +456,17 @@ namespace IPProxy
 
         }
 
-        private void MenuItem_Click_1(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_1(object sender, RoutedEventArgs e)//设置代理
         {
             SetProxyIP();
         }
 
-        private void MenuItem_Click_2(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_2(object sender, RoutedEventArgs e)//取消代理
         {
             CancelProxyIP();
         }
 
-        private void MenuItem_Click_3(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_3(object sender, RoutedEventArgs e)//一键获取
         {
             msgLabel.Content = "正在获取中，请稍后...";
             DispatcherHelper.DoEvents();
@@ -440,9 +499,9 @@ namespace IPProxy
             msgLabel.Content = strReturn;
         }
 
-        private void MenuItem_Click_4(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_4(object sender, RoutedEventArgs e)//一键验证
         {
-            AbortThread();
+            AbortAllThread();//终止多线程
             msgLabel.Content = "验证时间由网络和电脑情况决定，请耐心等候，验证结果请手动刷新！";
             int threadNum;
             try
@@ -487,7 +546,7 @@ namespace IPProxy
             }
         }
 
-        private void MenuItem_Click_5(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_5(object sender, RoutedEventArgs e)//导入文本
         {
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
             openFileDialog.Title = "选择文件";
@@ -527,15 +586,16 @@ namespace IPProxy
             myListView.ItemsSource = myProxyList;
         }
 
-        private void MenuItem_Click_6(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_6(object sender, RoutedEventArgs e)//刷新
         {
             myListView.ItemsSource = null;
             myListView.ItemsSource = myProxyList;
 
         }
 
-        private void MenuItem_Click_7(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_7(object sender, RoutedEventArgs e)//导出文本
         {
+            
             if (myProxyList.Count <= 0)
             {
                 msgLabel.Content = "当前没有数据！";
@@ -561,7 +621,7 @@ namespace IPProxy
             }
         }
 
-        private void MenuItem_Click_8(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_8(object sender, RoutedEventArgs e)//一键去除超时项
         {
             myListView.ItemsSource = null;
             tempProxyList.Clear();
@@ -585,7 +645,7 @@ namespace IPProxy
 
         private void Window_Closed_1(object sender, EventArgs e)
         {
-            AbortThread();
+            AbortAllThread();
             if ((bool)IsCancelCheckBox.IsChecked)
             {
                 try
@@ -601,9 +661,9 @@ namespace IPProxy
             }
         }
 
-        private void MenuItem_Click_9(object sender, RoutedEventArgs e)
+        private void MenuItem_Click_9(object sender, RoutedEventArgs e)//一键去除超时未知项
         {
-            AbortThread();
+            AbortAllThread();
             myListView.ItemsSource = null;
             tempProxyList.Clear();
             foreach (ProxyIP pp in myProxyList)
@@ -671,5 +731,29 @@ namespace IPProxy
                 msgLabel.Content = "当前列表没有数据，无法去重！";
             myListView.ItemsSource = myProxyList;
         }
+
+        private void Button_Click_7(object sender, RoutedEventArgs e)//google 测试
+        {
+            checkproxy();
+
+        }
+
+        private void threadTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+
+            Regex regex = new Regex(@"[0-8]");
+            
+            if (!regex.IsMatch(9.ToString()))
+            {
+                e.Handled = true;
+            }
+        }
+
+        private void timeOutTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            mySetting.timeout = Convert.ToInt32(timeOutTextBox.Text);
+            
+        }
+       
     }
 }
