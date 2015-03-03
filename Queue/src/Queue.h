@@ -10,18 +10,20 @@
 #define Queue_H
 
 //单链表实现的队列
-typedef unsigned char * Item;
-//typedef struct _data{
-//
-//	unsigned char id[4];
-//	unsigned char checksum;
-//}Item;
+//typedef unsigned char * Item;
+typedef struct _data{
+	unsigned int id;
+	unsigned char checksum;
+	unsigned char used;	//数据有效
+	unsigned char regedit;//注册到链表中
+	unsigned char resend;//发送次数
+}Item;
 //typedef struct node * PNode;
 //定义节点数据
 //队列节点包含队列指针 和 数据成员
 typedef struct node
 {
-    Item data;
+    Item *data;
     struct node * next;
 }Node;
 //队列由队列节点组成
@@ -57,7 +59,7 @@ Node * GetQueueHead(Queue * const pqueue,Item *pitem);
 Node * GetQueueTail(Queue * const pqueue,Item *pitem);
 
 /*将新元素入队尾*/
-Node * EnQueue(Queue *pqueue,Item item);
+Node * EnQueue(Queue *pqueue,Item * pitem);
 
 /*队头元素出队*/
 Node * DeQueue(Queue *pqueue,Item *pitem);

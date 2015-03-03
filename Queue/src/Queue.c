@@ -9,6 +9,7 @@
 #include<stdlib.h>
 #include<stdio.h>
 
+	unsigned char buff[4]={1,2,3,4};
 /*构造一个空队列*/
 Queue *InitQueue()
 {
@@ -60,7 +61,7 @@ Node * GetQueueHead( Queue *const pqueue,Item *pitem)
 {
     if(IsEmpty(pqueue)!=1&&pitem!=NULL)
     {
-        *pitem = pqueue->head->data;
+        pitem = pqueue->head->data;
     }
     return pqueue->head;
 }
@@ -71,19 +72,19 @@ Node * GetQueueTail( Queue *const pqueue,Item *pitem)
 {
     if(IsEmpty(pqueue)!=1&&pitem!=NULL)
     {
-        *pitem = pqueue->tail->data;
+        pitem = pqueue->tail->data;
     }
     return pqueue->tail;
 }
 
 /*将新元素入队*/
-Node * EnQueue(Queue *pqueue,Item item)
+Node * EnQueue(Queue *pqueue,Item * pitem)
 {
 	int a =sizeof(Node);
 	Node * pnode = (Node *)malloc(sizeof(Node));
     if(pnode != NULL)
     {
-        pnode->data = item;
+        pnode->data = pitem;
         pnode->next = NULL;
 
         if(IsEmpty(pqueue))
@@ -107,7 +108,7 @@ Node * DeQueue(Queue *pqueue,Item *pitem)
     if(IsEmpty(pqueue)!=1&&pnode!=NULL)
     {
         if(pitem!=NULL)
-            *pitem = pnode->data;
+            pitem = pnode->data;
         pqueue->size--;
         pqueue->head = pnode->next;
         free(pnode);
@@ -117,7 +118,7 @@ Node * DeQueue(Queue *pqueue,Item *pitem)
     return pqueue->head;
 }
 
-/*遍历队列并对各数据项调用visit函数*/
+/*遍历队列并对各数据项调用operate函数*/
 void QueueTraverse(Queue *pqueue,void (*operate)())
 {
     Node * pnode = pqueue->head;
@@ -131,23 +132,23 @@ void QueueTraverse(Queue *pqueue,void (*operate)())
 }
 
 
-void print(Item i)
+void print(Item *i)
 {
-    printf("该节点元素为%d\n",i);
+    printf("该节点元素为%d\n",i->id);
 }
-void main()
+int main(void)
 {
     Queue *pq = InitQueue();
     int i;
     Item items ={
-    		10
+    		10,9,8,7,6
     };
     printf("0-9依次入队并输出如下：\n");
     for(i=0;i<10;i++)
     {
-        EnQueue(pq,items);
+        EnQueue(pq,&items);
         GetQueueTail(pq,&items);
-        printf("%d ",items);
+        printf("%d ",items.id);
     }
 
     printf("\n从队头到队尾遍历并对每个元素执行print函数：\n");
@@ -157,12 +158,14 @@ void main()
     for(i=0;i<10;i++)
     {
         DeQueue(pq,&items);
-        printf("%d ",items);
+        printf("%d ",items.used);
     }
     ClearQueue(pq);
     if(IsEmpty(pq))
         printf("\n将队列置空成功\n");
     DestroyQueue(pq);
     printf("队列已被销毁\n");
+
+    return 0;
 }
 
