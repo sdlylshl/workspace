@@ -1,17 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 //using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Threading;
@@ -151,6 +141,19 @@ namespace stm32timer
                 }
             }
         }
+        string _valuedev = "未知";
+        public string valuedev
+        {
+            get { return _valuedev; }
+            set
+            {
+                if (_valuedev != value)
+                {
+                    _valuedev = value;
+                    // OnPropertyChanged("valuedev");
+                }
+            }
+        }
         #endregion
 #else
         #region 非异步回调
@@ -206,7 +209,9 @@ namespace stm32timer
             int j;
             int presc;
             int rlod;
-            int dvt;
+            int decdvt; //小数误差 
+            //其实这个值没有什么意义,我最终需要的是我 T计数/T分频频率 = 采样周期即可
+            int dvt;    //误差
                 int dec;    //小数
                 int intg;   //整数
                 tm0 = (1000000000 / voice_clk);
@@ -220,8 +225,10 @@ namespace stm32timer
                     //tm = (1000000000 / voice_clk) * i;
                     intg = (int)tm /1000;
                     dec = (int)tm % 1000;
-
-                    if (dec < accuracy_value)
+                    presc = (sysclk / i) - 1; 
+                    rlod = i * 1000000 / voice_clk; 
+                    dvt =(int) (((rlod*1000)*10000/(sysclk / (presc + 1)))/tm0); //采样误差
+                    if (dvt >= accuracy_value)
                     {
                         ProxyIP pp = new ProxyIP();
                         pp.decimals = "0";
@@ -230,11 +237,9 @@ namespace stm32timer
                         pp.prescale = "0";
                         pp.reload = "0";
                         pp.Speed = "0";
-                        presc = (sysclk / i) - 1;
-                        pp.prescale = presc.ToString();
-                        rlod = i * 1000000 / voice_clk;
-                        pp.reload = rlod.ToString();
-                        dvt =(int) (((rlod*1000)*100/(sysclk / (presc + 1)))/tm0);
+                       
+                        pp.prescale = presc.ToString();                       
+                        pp.reload = rlod.ToString();                       
                         pp.deviation = dvt.ToString();
                         pp.Index = i.ToString();
                         pp.integers = intg.ToString();
@@ -262,23 +267,28 @@ namespace stm32timer
 
         private void combox_voice_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            double tm0;
             switch (combox_voice.SelectedIndex)
             {
                 case 0:
-                    voice_clk = 44100;
+                    voice_clk = 22050;
                     break;
                 case 1:
-                    voice_clk = 48000;
+                    voice_clk = 44100;
                     break;
                 case 2:
-                    voice_clk = 128000;
+                    voice_clk = 24000;
                     break;
                 case 3:
+                    voice_clk = 48000;
+                    break;
+                case 4:
                     voice_clk = 320000;
                     break;
 
-
             }
+            tm0 = (1000000000 / voice_clk);
+            sample.Text = tm0.ToString();
         }
 
         private void system_clk_TextChanged(object sender, TextChangedEventArgs e)
