@@ -197,6 +197,17 @@ namespace stm32timer
 
         List<ProxyIP> myList = new List<ProxyIP>();
 
+  //      16Kbps=电话音质 
+  //24Kbps=增加电话音质、短波广播、长波广播、欧洲制式中波广播 
+  //40Kbps=美国制式中波广播 
+  //56Kbps=话音 
+  //64Kbps=增加话音（手机铃声最佳比特率设定值、手机单声道MP3播放器最佳设定值） 
+  //112Kbps=FM调频立体声广播 
+  //128Kbps=磁带（手机立体声MP3播放器最佳设定值、低档MP3播放器最佳设定值） 
+  //160Kbps=HIFI高保真（中高档MP3播放器最佳设定值） 
+  //192Kbps=CD（高档MP3播放器最佳设定值） 
+  //256Kbps=Studio音乐工作室（音乐发烧友适用） 
+
         int sysclk = 72;
         int accuracy_value = 0;//精度
         int voice_clk = 44100;
@@ -306,9 +317,12 @@ namespace stm32timer
             }
         }
 
+
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
             count=0;
+
+
         }
 
         private void accuracy_TextChanged(object sender, TextChangedEventArgs e)
