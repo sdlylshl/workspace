@@ -26,11 +26,22 @@ const uint8_t CHWAV_RIFF[4] = { 0x52, 0x49, 0x46, 0x46 };
 const uint8_t CHWAV_WAVE[4] = { 0x57, 0x41, 0x56, 0x45 };
 const uint8_t CHWAV_FMT[4] = { 0x66, 0x6D, 0x74, 0x20 };
 const uint8_t CHWAV_DATA[4] = { 0x64, 0x61, 0x74, 0x61 };
-// 小端模式
+
+#if Big-Endian
+// 大端模式
+const uint32_t DWWAV_RIFF = 0x52494646;
+const uint32_t DWWAV_WAVE = 0x57415645;
+const uint32_t DWWAV_FMT =  0x666D7420;
+const uint32_t DWWAV_DATA = 0x64617461;
+
+#else
+// 小端模式 Windows ARM 默认模式
 const uint32_t DWWAV_RIFF = 0x46464952;
 const uint32_t DWWAV_WAVE = 0x45564157;
 const uint32_t DWWAV_FMT =  0x20746D66;
 const uint32_t DWWAV_DATA = 0x61746164;
+#endif
+//注意属性中的比特率是176kbps，而1CH中为22050Byte/s，换算一下就会发现22050*8/1024并不等于176，而是等于172，这里我想可能是通信中的1K并不等于1024而是等于1000的原因（通信原理书中好像有），如果按22050*8/1000这样算，就正好等于176了。其实比特率也可以这样算，总字节除以时长得到每秒字节率，再乘以8除以1000就得到比特率了，即(1325000/60)*8/1000=176kbps。
 typedef struct {
 	//	 RIFF_HEADER
 
@@ -49,12 +60,12 @@ typedef struct {
 	uint16_t Channels;		//16H	2byte	1为单声道，2为双声道，这里是0001H。
 	//SampleRate;
 	uint32_t SamplesPerSec;	//18H	4byte	采样频率，这里是00002B11H，也就是11025Hz。
-	//speed;
-	uint32_t AvgBytesPerSec;//1CH	4byte	Byte率=采样频率*音频通道数*每次采样得到的样本位数/8，00005622H，也就是22050Byte/s=11025*1*16/2。
+	//speed;				比特率=AvgBytesPerSec*8/1000
+	uint32_t AvgBytesPerSec;//1CH	4byte	每秒所需字节数 | =采样频率SamplesPerSec*音频通道数Channels*每次采样得到的样本位数BitsPerSample/8，00005622H，也就是22050Byte/s=11025*1*16/2。
 	//ajust;
-	uint16_t BlockAlign;	//20H	2byte	块对齐=通道数*每次采样得到的样本位数/8，0002H，也就是2=1*16/8。
+	uint16_t BlockAlign;	//20H	2byte	每个采样需要字节数 | 数据块块对齐单位=通道数*每次采样得到的样本位数/8，0002H，也就是2=1*16/8。
 	//SampleBits;
-	uint16_t BitsPerSample;	//22H	2byte	样本数据位数，0010H即16，一个量化样本占2byte。
+	uint16_t BitsPerSample;	//22H	2byte	每个采样位数BitsPerSample，0010H即16，一个量化样本占2byte。
 
 	//uint8_t chDATA[4];	//24H	4byte	data，一个标志而已。
 	uint32_t chdata;
@@ -91,24 +102,32 @@ uint8_t WAV_Init(uint8_t* pbuf) //初始化并显示文件信息
 	uint8_t *pbuf0=pbuf;
 	for(i=0;i<0x30;i++)
 	wavinfo.wavbuf[i] = *(pbuf0++);
-	if (wavinfo.wavhead.chriff != DWWAV_RIFF)
-		return 1;	//RIFF标志错误
+	if (wavinfo.wavhead.chriff != DWWAV_RIFF){
+		printf("RIFF标志错误\n");
+//		return 1;	//RIFF标志错误
+	}
 	//wav1.wavlen = Get_num(pbuf + 4, 4);		//文件长度，数据偏移4byte
-	if (wavinfo.wavhead.chwav != DWWAV_WAVE)
-		return 2;		//WAVE标志错误
-	if (wavinfo.wavhead.chfmt !=DWWAV_FMT)
-		return 3;		//fmt标志错误
-	if (wavinfo.wavhead.chdata != DWWAV_DATA)
-		return 4;		//data标志错误
+	if (wavinfo.wavhead.chwav != DWWAV_WAVE){
+		printf("WAVE标志错误\n");
+//		return 2;		//WAVE标志错误
+	}
+	if (wavinfo.wavhead.chfmt !=DWWAV_FMT){
+		printf("FMT标志错误\n");
+//		return 3;		//fmt标志错误
+	}
+	if (wavinfo.wavhead.chdata != DWWAV_DATA){
+		printf("data标志错误\n");
+//		return 4;		//data标志错误
+	}
 	printf("headlen: %x\n",wavinfo.wavhead.wavlen-wavinfo.wavhead.DATAlen-1+8);
 	printf("wavlen: %d\n",wavinfo.wavhead.wavlen);
 	printf("DATAlen: %d\n",wavinfo.wavhead.DATAlen);
 	printf("文件大小: %d\n",wavinfo.wavhead.wavlen+8);
 	printf("声道Channels: %d\n",wavinfo.wavhead.Channels);
-	printf("样本位数BitsPerSample: %d\n",wavinfo.wavhead.BitsPerSample);
+	printf("采样字节数 BlockAlign: %d\n",wavinfo.wavhead.BlockAlign);
+	printf("采样位数BitsPerSample: %d\n",wavinfo.wavhead.BitsPerSample);
 	printf("采样频率SamplesPerSec: %d\n",wavinfo.wavhead.SamplesPerSec);
-	printf("比特率AvgBytesPerSec: %d\n",wavinfo.wavhead.AvgBytesPerSec);
-	printf("BlockAlign: %d\n",wavinfo.wavhead.BlockAlign);
+	printf("比特率AvgBytesPerSec: %dkps\n",wavinfo.wavhead.AvgBytesPerSec*8/1000);
 
 	wav1.FormatTag = Get_num(pbuf + 20, 2);		//格式类别
 	wav1.Channels = Get_num(pbuf + 22, 2);		//通道数
@@ -158,7 +177,10 @@ int main() {
 	unsigned char s[1024] = { 0 };
 	FILE *fp = NULL;
 	printf("open 000.wav");
-	if (NULL == (fp = fopen("C:\\Windows\\000.wav", "rb+")))
+	if (NULL == (fp = fopen("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav", "rb+")))
+//	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\notify.wav", "rb+")))
+//	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\notify.wav", "rb+")))
+//	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\001.wav", "rb+")))
 		return 0;
 //	参数：第一个参数为接收数据的指针(buff),也即数据存储的地址
 //	第二个参数为单个元素的大小，即由指针写入地址的数据大小，注意单位是字节
