@@ -21,26 +21,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-const uint8_t CHWAV_RIFF[4] = { 0x52, 0x49, 0x46, 0x46 };
-const uint8_t CHWAV_WAVE[4] = { 0x57, 0x41, 0x56, 0x45 };
-const uint8_t CHWAV_FMT[4] = { 0x66, 0x6D, 0x74, 0x20 };
-const uint8_t CHWAV_DATA[4] = { 0x64, 0x61, 0x74, 0x61 };
-
-#if Big-Endian
-// 大端模式
-const uint32_t DWWAV_RIFF = 0x52494646;
-const uint32_t DWWAV_WAVE = 0x57415645;
-const uint32_t DWWAV_FMT =  0x666D7420;
-const uint32_t DWWAV_DATA = 0x64617461;
-
-#else
-// 小端模式 Windows ARM 默认模式
-const uint32_t DWWAV_RIFF = 0x46464952;
-const uint32_t DWWAV_WAVE = 0x45564157;
-const uint32_t DWWAV_FMT =  0x20746D66;
-const uint32_t DWWAV_DATA = 0x61746164;
-#endif
+#include "wave.h"
+extern const uint32_t DWWAV_RIFF;
+extern const uint32_t DWWAV_WAVE;
+extern const uint32_t DWWAV_FMT;
+extern const uint32_t DWWAV_DATA;
 //注意属性中的比特率是176kbps，而1CH中为22050Byte/s，换算一下就会发现22050*8/1024并不等于176，而是等于172，这里我想可能是通信中的1K并不等于1024而是等于1000的原因（通信原理书中好像有），如果按22050*8/1000这样算，就正好等于176了。其实比特率也可以这样算，总字节除以时长得到每秒字节率，再乘以8除以1000就得到比特率了，即(1325000/60)*8/1000=176kbps。
 typedef struct {
 	//	 RIFF_HEADER
@@ -172,10 +157,22 @@ int main0(void) {
 	fclose(fp2);
 	return EXIT_SUCCESS;
 }
-int main() {
+int main(int argc, char **argv){
+	printf("参数个数：%d\n",argc);
+	 if(argc == 2){
+		 wav_open(argv[1]);
+	 }else{
+		wav_open("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav");
+	 }
+
+
+}
+int main1() {
 	int i;
 	unsigned char s[1024] = { 0 };
 	FILE *fp = NULL;
+
+
 	printf("open 000.wav");
 	if (NULL == (fp = fopen("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav", "rb+")))
 //	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\notify.wav", "rb+")))

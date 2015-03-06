@@ -224,11 +224,11 @@ int main(int argc, char **argv){
     if(argc != 2){
         printf("Usage:\n");
         printf("\twav_parse wav_file\n");
-        return 0;
+//        return 0;
     }
 
-
-    wav = wav_open(argv[1]);
+    wav = wav_open("D:\\Program Files\\BaiduYunGuanjia\\sounds\\1.wav");
+//    wav = wav_open(argv[1]);
     if(NULL != wav){
         wav_dump(wav);
         wav_close(&wav);
