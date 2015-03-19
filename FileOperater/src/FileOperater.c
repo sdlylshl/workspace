@@ -32,12 +32,12 @@ typedef struct {
 
 	//uint8_t chRIFF[4];	//00H 	4byte 52 49 46 46   RIFF，资源交换文件标志。
 	uint32_t chriff;
-	uint32_t wavlen;		//04H	4byte 从下一个地址开始到文件尾的总字节数。高位字节在后面，这里就是001437ECH，换成十进制是1325036byte，算上这之前的8byte就正好1325044byte了。
+	uint32_t wavlen;//04H	4byte 从下一个地址开始到文件尾的总字节数。高位字节在后面，这里就是001437ECH，换成十进制是1325036byte，算上这之前的8byte就正好1325044byte了。
 	//uint8_t chWAV[4];		//08H	4byte 57 41 56 45  	WAVE，代表wav文件格式。
 	uint32_t chwav;
 	//uint8_t chFMT[4];		//0CH	4byte 66 6D 74 20	FMT ，波形格式标志
 	uint32_t chfmt;
-	uint32_t PcmSize;		//10H	4byte	00000010H，16PCM，这个对应定义中的PCMWAVEFORMAT部分的大小，可以看到后面的这个段内容正好是16个字节。当为16时，最后是没有附加信息的，当为数字18时，最后多了两个字节的附加信息
+	uint32_t PcmSize;//10H	4byte	00000010H，16PCM，这个对应定义中的PCMWAVEFORMAT部分的大小，可以看到后面的这个段内容正好是16个字节。当为16时，最后是没有附加信息的，当为数字18时，最后多了两个字节的附加信息
 	//	PCMWAVEFORMAT
 	//formart;
 	uint16_t FormatTag;		//14H	2byte	为1时表示线性PCM编码，大于1时表示有压缩的编码。这里是0001H。
@@ -48,17 +48,17 @@ typedef struct {
 	//speed;				比特率=AvgBytesPerSec*8/1000
 	uint32_t AvgBytesPerSec;//1CH	4byte	每秒所需字节数 | =采样频率SamplesPerSec*音频通道数Channels*每次采样得到的样本位数BitsPerSample/8，00005622H，也就是22050Byte/s=11025*1*16/2。
 	//ajust;
-	uint16_t BlockAlign;	//20H	2byte	每个采样需要字节数 | 数据块块对齐单位=通道数*每次采样得到的样本位数/8，0002H，也就是2=1*16/8。
+	uint16_t BlockAlign;//20H	2byte	每个采样需要字节数 | 数据块块对齐单位=通道数*每次采样得到的样本位数/8，0002H，也就是2=1*16/8。
 	//SampleBits;
 	uint16_t BitsPerSample;	//22H	2byte	每个采样位数BitsPerSample，0010H即16，一个量化样本占2byte。
 
 	//uint8_t chDATA[4];	//24H	4byte	data，一个标志而已。
 	uint32_t chdata;
-	uint32_t DATAlen;		//28H	4byte	Wav文件实际音频数据所占的大小，这里是001437C8H即1325000，再加上2CH就正好是1325044，整个文件的大小。
+	uint32_t DATAlen;//28H	4byte	Wav文件实际音频数据所占的大小，这里是001437C8H即1325000，再加上2CH就正好是1325044，整个文件的大小。
 } WAV_head_t;
 typedef union {
 	WAV_head_t wavhead;
-	uint8_t wavbuf[0x30];
+	uint8_t wavbuf[0x2C];
 } WAVE_info_u;
 WAV_head_t wav1;
 uint8_t CHanalnum;
@@ -73,76 +73,45 @@ uint8_t Check_Ifo(uint8_t* pbuf1, uint8_t* pbuf2) {
 			return 1;
 	return 0;
 }
-uint32_t Get_num(uint8_t* pbuf, uint8_t len) {
-	uint32_t num;
-	if (len == 2)
-		num = (pbuf[1] << 8) | pbuf[0];
-	else if (len == 4)
-		num = (pbuf[3] << 24) | (pbuf[2] << 16) | (pbuf[1] << 8) | pbuf[0];
-	return num;
-}
-uint8_t WAV_Init(uint8_t* pbuf) //初始化并显示文件信息
+
+uint8_t WAV_Init(uint8_t* pbuf) //初始化并显示文件信息	注: 仅适用于没有fact区的wav文件
 {
 	int i;
-	uint8_t *pbuf0=pbuf;
-	for(i=0;i<0x30;i++)
-	wavinfo.wavbuf[i] = *(pbuf0++);
-	if (wavinfo.wavhead.chriff != DWWAV_RIFF){
+	uint8_t *pbuf0 = pbuf;
+	//取得WAV文件头
+	for (i = 0; i < 0x2C; i++)
+		wavinfo.wavbuf[i] = *(pbuf0++);
+
+	if (wavinfo.wavhead.chriff != DWWAV_RIFF) {
 		printf("RIFF标志错误\n");
 //		return 1;	//RIFF标志错误
 	}
 	//wav1.wavlen = Get_num(pbuf + 4, 4);		//文件长度，数据偏移4byte
-	if (wavinfo.wavhead.chwav != DWWAV_WAVE){
+	if (wavinfo.wavhead.chwav != DWWAV_WAVE) {
 		printf("WAVE标志错误\n");
 //		return 2;		//WAVE标志错误
 	}
-	if (wavinfo.wavhead.chfmt !=DWWAV_FMT){
+	if (wavinfo.wavhead.chfmt != DWWAV_FMT) {
 		printf("FMT标志错误\n");
 //		return 3;		//fmt标志错误
 	}
-	if (wavinfo.wavhead.chdata != DWWAV_DATA){
+	if (wavinfo.wavhead.chdata != DWWAV_DATA) {
 		printf("data标志错误\n");
 //		return 4;		//data标志错误
 	}
-	printf("headlen: %x\n",wavinfo.wavhead.wavlen-wavinfo.wavhead.DATAlen-1+8);
-	printf("wavlen: %d\n",wavinfo.wavhead.wavlen);
-	printf("DATAlen: %d\n",wavinfo.wavhead.DATAlen);
-	printf("文件大小: %d\n",wavinfo.wavhead.wavlen+8);
-	printf("声道Channels: %d\n",wavinfo.wavhead.Channels);
-	printf("采样字节数 BlockAlign: %d\n",wavinfo.wavhead.BlockAlign);
-	printf("采样位数BitsPerSample: %d\n",wavinfo.wavhead.BitsPerSample);
-	printf("采样频率SamplesPerSec: %d\n",wavinfo.wavhead.SamplesPerSec);
-	printf("比特率AvgBytesPerSec: %dkps\n",wavinfo.wavhead.AvgBytesPerSec*8/1000);
+	printf("offset:0x%x %d\n",
+			wavinfo.wavhead.wavlen - wavinfo.wavhead.DATAlen + 8,
+			wavinfo.wavhead.wavlen - wavinfo.wavhead.DATAlen + 8);
+	printf("filesize: %d\n", wavinfo.wavhead.wavlen + 8);
+	printf("wavlen:   %d\n", wavinfo.wavhead.wavlen);
+	printf("DATAlen:  %d\n", wavinfo.wavhead.DATAlen);
+	printf("声道Channels: %d\n", wavinfo.wavhead.Channels);
+	printf("采样字节数 BlockAlign: %d\n", wavinfo.wavhead.BlockAlign);
+	printf("采样位数BitsPerSample: %d\n", wavinfo.wavhead.BitsPerSample);
+	printf("采样频率SamplesPerSec: %d\n", wavinfo.wavhead.SamplesPerSec);
+	printf("比特率AvgBytesPerSec: %dkps\n",
+			wavinfo.wavhead.AvgBytesPerSec * 8 / 1000);
 
-	wav1.FormatTag = Get_num(pbuf + 20, 2);		//格式类别
-	wav1.Channels = Get_num(pbuf + 22, 2);		//通道数
-	CHanalnum = wav1.Channels;
-	wav1.SamplesPerSec = Get_num(pbuf + 24, 4);		//采样率
-	wav1.AvgBytesPerSec = Get_num(pbuf + 28, 4);		//音频传送速率
-	wav1.BlockAlign = Get_num(pbuf + 32, 2);		//数据块调速数
-	wav1.BitsPerSample = Get_num(pbuf + 34, 2);		//样本数据位数
-	Bitnum = wav1.BitsPerSample;
-	wav1.DATAlen = Get_num(pbuf + 40, 4);		//数据长度
-	///////////////////////////////////////////////
-//	if (wav1.wavlen < 0x100000) {
-//		LCD_ShowNum(170, 30, (wav1.wavlen) >> 10, 3, 16);	//文件长度
-//		LCD_ShowString(200, 30, "Kb");
-//	} else {
-//		LCD_ShowNum(170, 30, (wav1.wavlen) >> 20, 3, 16);	//文件长度
-//		LCD_ShowString(200, 30, "Mb");
-//	}
-//	if (wav1.FormatTag == 1)
-//		LCD_ShowString(170, 50, "WAV PCM");
-//	if (wav1.Channels == 1)
-//		LCD_ShowString(170, 70, "single");
-//	else
-//		LCD_ShowString(170, 70, "stereo");
-//	LCD_ShowNum(170, 90, (wav1.SamplesPerSec) / 1000, 3, 16);	//采样率
-//	LCD_ShowString(200, 90, "KHz");
-//	LCD_ShowNum(170, 110, (wav1.AvgBytesPerSec) / 1000, 3, 16);	//传送速度
-//	LCD_ShowString(200, 110, "bps");
-//	LCD_ShowNum(177, 130, wav1.BitsPerSample, 2, 16);	//样本数据位数
-//	LCD_ShowString(200, 130, "bit");
 	return 0;
 }
 
@@ -157,14 +126,58 @@ int main0(void) {
 	fclose(fp2);
 	return EXIT_SUCCESS;
 }
-int main(int argc, char **argv){
-	printf("参数个数：%d\n",argc);
-	 if(argc == 2){
-		 wav_open(argv[1]);
-	 }else{
-		wav_open("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav");
-	 }
+#define BETWEEN(VAL, vmin, vmax) ((VAL) >= (vmin) && (VAL) <= (vmax))
+#define ISHEXCHAR(VAL) (BETWEEN(VAL, '0', '9') || BETWEEN(VAL, 'A', 'F') || BETWEEN(VAL, 'a', 'f'))
+char BYTE2HEX(uint8_t int_val)
+{
+    if (BETWEEN(int_val, 0, 9))
+    {
+        return int_val + 0x30;
+    }
 
+    if (BETWEEN(int_val, 0xA, 0xF))
+    {
+        return (int_val - 0xA) + 'A';
+    }
+
+    return '0';
+}
+int main(int argc, char **argv) {
+	FILE *fpi;
+	FILE *fpo;
+	char * strn = "\n";
+	uint8_t buffer[1];
+	uint8_t str[6];
+	uint8_t len =1;
+	int i;
+	printf("parament num: %d\n", argc);
+	if (argc == 2) {
+		wav_open(argv[1]);
+	} else if(argc == 3){
+		fpi =fopen(argv[1], "rb+");
+		if (NULL == fpi)
+			return 0;
+		fpo =fopen(argv[2], "ab+");
+		if (NULL == fpo)
+			return 0;
+		printf("write: %d\n", len);
+		str[0]='0';
+		str[1]='x';
+		str[4]=',';
+		str[5]=' ';
+		i=1;
+		while(len){
+			len=fread(buffer, 1, 1, fpi);
+			str[2] = BYTE2HEX((uint8_t)((buffer[0]>>4)&0x0F));
+			str[3] = BYTE2HEX((uint8_t)((buffer[0])&0x0F));
+			fwrite (str, 1, 6, fpo);
+			if(!(i++%16)){
+				fwrite (strn, 1, 1, fpo);
+			}
+		}
+	}else {
+		wav_open("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav");
+	}
 
 }
 int main1() {
@@ -172,9 +185,10 @@ int main1() {
 	unsigned char s[1024] = { 0 };
 	FILE *fp = NULL;
 
-
 	printf("open 000.wav");
-	if (NULL == (fp = fopen("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav", "rb+")))
+	if (NULL
+			== (fp = fopen("D:\\Program Files\\BaiduYunGuanjia\\sounds\\1.wav",
+					"rb+")))
 //	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\notify.wav", "rb+")))
 //	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\notify.wav", "rb+")))
 //	if (NULL == (fp = fopen("D:\\work\\PARKING\\yyzdbssc\\001.wav", "rb+")))
