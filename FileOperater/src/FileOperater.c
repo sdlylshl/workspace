@@ -145,36 +145,54 @@ char BYTE2HEX(uint8_t int_val)
 int main(int argc, char **argv) {
 	FILE *fpi;
 	FILE *fpo;
+	char *str2=argv[2];
+
 	char * strn = "\n";
 	uint8_t buffer[1];
 	uint8_t str[6];
 	uint8_t len =1;
+	uint8_t nam[100];
 	int i;
 	printf("parament num: %d\n", argc);
 	if (argc == 2) {
 		wav_open(argv[1]);
 	} else if(argc == 3){
+
+		wav_open(argv[1]);
 		fpi =fopen(argv[1], "rb+");
 		if (NULL == fpi)
 			return 0;
+		printf("%s\n", argv[2]);
 		fpo =fopen(argv[2], "ab+");
 		if (NULL == fpo)
 			return 0;
+		for(i=0;*str2;i++){
+			if(*str2++ == '.'){
+				break;
+			}
+			printf("%d", i);
+		}
 		printf("write: %d\n", len);
 		str[0]='0';
 		str[1]='x';
 		str[4]=',';
 		str[5]=' ';
+
+		//写入头
+		fwrite ("#include \"stdint.h\"\n", 1, 20, fpo);
+		fwrite ("const uint8_t WAV_", 1, 18, fpo);
+		fwrite (argv[2], 1, i, fpo);
+		fwrite ("[]={\n", 1, 5, fpo);
 		i=1;
-		while(len){
-			len=fread(buffer, 1, 1, fpi);
+		while(fread(buffer, 1, 1, fpi)){
 			str[2] = BYTE2HEX((uint8_t)((buffer[0]>>4)&0x0F));
 			str[3] = BYTE2HEX((uint8_t)((buffer[0])&0x0F));
 			fwrite (str, 1, 6, fpo);
 			if(!(i++%16)){
-				fwrite (strn, 1, 1, fpo);
+				fwrite ("\n", 1, 1, fpo);
 			}
 		}
+		fwrite ("\n};", 1, 2, fpo);
 	}else {
 		wav_open("D:\\Program Files\\BaiduYunGuanjia\\sounds\\5.wav");
 	}
