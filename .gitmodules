@@ -1,0 +1,3 @@
+[submodule "keilmake"]
+	path = keilmake
+	url = https://github.com/qdog2012/keilmake
